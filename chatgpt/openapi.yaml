@@ -1,0 +1,306 @@
+openapi: 3.1.0
+info:
+  title: Antigravity Agent Bridge for ChatGPT
+  description: Connects OpenAI ChatGPT with Google Antigravity autonomous coding agent engine powered by Bring-Your-Own-Key (BYOK) Gemini API.
+  version: 1.0.0
+servers:
+  - url: https://your-bridge-domain.com
+    description: Production Antigravity Bridge or Local Tunnel URL
+paths:
+  /v1/auth/verify:
+    get:
+      summary: Verify Gemini API Key
+      description: Validates that the provided Gemini API key is active and capable of invoking Gemini models via Google AI Studio.
+      operationId: verifyGeminiKey
+      security:
+        - BearerAuth: []
+        - GeminiApiKeyAuth: []
+      responses:
+        '200':
+          description: Key is valid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VerifyResponse'
+        '401':
+          description: Invalid or missing API key
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /v1/models:
+    get:
+      summary: List Supported Models
+      description: Returns the list of Gemini models supported by Antigravity, including flash and pro tiers.
+      operationId: listSupportedModels
+      responses:
+        '200':
+          description: Available model list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModelsResponse'
+
+  /v1/agent/run:
+    post:
+      summary: Run Antigravity Agent Task
+      description: Spawns an Antigravity autonomous agent turn to execute software engineering tasks, code modifications, terminal commands, or debugging using the user's Gemini API key.
+      operationId: runAgentTask
+      security:
+        - BearerAuth: []
+        - GeminiApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AgentRunRequest'
+      responses:
+        '200':
+          description: Agent task completed synchronously
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgentRunResponse'
+        '202':
+          description: Task accepted and executing asynchronously (use GET /v1/tasks/{task_id} to poll status)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AsyncTaskAcceptedResponse'
+        '400':
+          description: Bad request or validation failure
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized - missing or invalid Gemini API key
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          description: Gemini API quota exceeded or rate limited
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /v1/tasks/{task_id}:
+    get:
+      summary: Get Async Task Status
+      description: Polls the execution status and output of a long-running Antigravity agent task.
+      operationId: getTaskStatus
+      parameters:
+        - name: task_id
+          in: path
+          required: true
+          description: The unique task identifier returned in the 202 Accepted response.
+          schema:
+            type: string
+      security:
+        - BearerAuth: []
+        - GeminiApiKeyAuth: []
+      responses:
+        '200':
+          description: Task status retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskStatusResponse'
+        '404':
+          description: Task ID not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      description: Google AI Studio Gemini API Key
+    GeminiApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-Gemini-API-Key
+      description: Google AI Studio Gemini API Key via custom header
+
+  schemas:
+    AgentRunRequest:
+      type: object
+      required:
+        - prompt
+      properties:
+        prompt:
+          type: string
+          description: The concrete programming, refactoring, or investigation instruction for the Antigravity agent.
+          example: "Find and fix the memory leak in src/cache.py and run the pytest suite."
+        model:
+          type: string
+          description: Gemini model identifier. Defaults to gemini-3.8-flash-high.
+          enum:
+            - gemini-3.8-flash-high
+            - gemini-3.8-flash-medium
+            - gemini-3.8-flash-low
+            - gemini-3.7-flash-high
+            - gemini-3.7-flash-medium
+            - gemini-3.1-pro-high
+            - gemini-3.1-pro-low
+          default: gemini-3.8-flash-high
+        effort:
+          type: string
+          description: Reasoning effort level for the model.
+          enum: [low, medium, high, xhigh, max]
+          default: high
+        git_repo_url:
+          type: string
+          description: Optional public or authenticated Git URL to clone into an ephemeral sandbox workspace before execution.
+          example: "https://github.com/example/repo.git"
+        git_branch:
+          type: string
+          description: Optional Git branch or commit ref to checkout.
+        wait_seconds:
+          type: integer
+          description: Seconds to wait synchronously before returning 202 Accepted for polling (max 35 seconds to safely satisfy ChatGPT timeout).
+          default: 30
+          maximum: 35
+
+    AgentRunResponse:
+      type: object
+      required:
+        - status
+        - summary
+      properties:
+        status:
+          type: string
+          enum: [completed, failed]
+          example: completed
+        summary:
+          type: string
+          description: Final answer and summary of actions taken by Antigravity.
+        files_changed:
+          type: array
+          items:
+            $ref: '#/components/schemas/FileDiff'
+        commands_executed:
+          type: array
+          items:
+            $ref: '#/components/schemas/CommandRecord'
+        execution_time_seconds:
+          type: number
+          example: 12.4
+
+    FileDiff:
+      type: object
+      properties:
+        path:
+          type: string
+          example: "src/cache.py"
+        status:
+          type: string
+          enum: [modified, created, deleted]
+          example: modified
+        diff:
+          type: string
+          description: Unified diff representation of changes made.
+
+    CommandRecord:
+      type: object
+      properties:
+        command:
+          type: string
+          example: "pytest tests/test_cache.py"
+        exit_code:
+          type: integer
+          example: 0
+        output_snippet:
+          type: string
+          example: "3 passed in 0.42s"
+
+    AsyncTaskAcceptedResponse:
+      type: object
+      required:
+        - task_id
+        - status
+        - poll_url
+      properties:
+        task_id:
+          type: string
+          example: "task_9f81a7d2b4"
+        status:
+          type: string
+          example: "running"
+        poll_url:
+          type: string
+          example: "/v1/tasks/task_9f81a7d2b4"
+        message:
+          type: string
+          example: "Agent execution is taking longer than 30s. Please poll /v1/tasks/{task_id}."
+
+    TaskStatusResponse:
+      type: object
+      required:
+        - task_id
+        - status
+      properties:
+        task_id:
+          type: string
+          example: "task_9f81a7d2b4"
+        status:
+          type: string
+          enum: [queued, running, completed, failed]
+          example: completed
+        result:
+          $ref: '#/components/schemas/AgentRunResponse'
+        error:
+          type: string
+
+    VerifyResponse:
+      type: object
+      required:
+        - valid
+        - message
+      properties:
+        valid:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: "Gemini API key is valid and connected to Google AI Studio."
+
+    ModelsResponse:
+      type: object
+      required:
+        - models
+      properties:
+        models:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+                example: "gemini-3.8-flash-high"
+              name:
+                type: string
+                example: "Gemini 3.8 Flash (High Reasoning)"
+              recommended_for:
+                type: string
+                example: "Autonomous coding, SWE-bench debugging, deep refactoring"
+
+    ErrorResponse:
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: string
+          example: "MISSING_API_KEY"
+        message:
+          type: string
+          example: "No Gemini API key provided. Please configure Bearer token or X-Gemini-API-Key."

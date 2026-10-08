@@ -1,0 +1,39 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Distribution / packaging
+dist/
+build/
+*.egg-info/
+.eggs/
+
+# Virtual environments
+venv/
+.venv/
+env/
+ENV/
+
+# Temporary sandboxes & cache
+tmp/
+sandboxes/
+*.log
+
+# Sensitive credentials & environment files
+.env
+.env.*
+!.env.example
+secrets/
+*.pem
+*.key
+
+# IDE & Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Antigravity internal runtime logs
+.antigravitycli/
+.gemini/
