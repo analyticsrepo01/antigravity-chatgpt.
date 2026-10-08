@@ -1,6 +1,6 @@
 # 🚀 Antigravity for ChatGPT (Gemini BYOK)
 
-[![CI](https://github.com/your-org/antigravity-chatgpt/actions/workflows/ci.yaml/badge.svg)](https://github.com/your-org/antigravity-chatgpt/actions)
+[![CI](https://github.com/analyticsrepo01/antigravity-chatgpt/actions/workflows/ci.yaml/badge.svg)](https://github.com/analyticsrepo01/antigravity-chatgpt/actions)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![OpenAPI 3.1](https://img.shields.io/badge/OpenAPI-3.1-green.svg)](https://spec.openapis.org/oas/v3.1.0)
@@ -53,7 +53,7 @@ flowchart LR
 
 ### 1. Install & Launch the Bridge
 ```bash
-git clone https://github.com/your-org/antigravity-chatgpt.git
+git clone git@github.com:analyticsrepo01/antigravity-chatgpt.git
 cd antigravity-chatgpt
 
 pip install -e .
