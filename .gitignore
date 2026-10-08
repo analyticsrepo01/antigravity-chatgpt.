@@ -19,6 +19,7 @@ ENV/
 tmp/
 sandboxes/
 *.log
+.ipynb_checkpoints/
 
 # Sensitive credentials & environment files
 .env
